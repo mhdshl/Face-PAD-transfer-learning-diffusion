@@ -1,4 +1,4 @@
-# Face Presentation Attack Detection using Image Diffusion
+# Face Presentation Attack Detection using Transfer Learning and Image Diffusion
 Using image diffusion and transfer learning for face presentation attack detection.
 
 ## Model Description
