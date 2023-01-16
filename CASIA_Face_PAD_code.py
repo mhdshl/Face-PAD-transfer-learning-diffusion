@@ -1,3 +1,5 @@
+# Loading useful packages and libraries
+
 import cv2
 import math
 import numpy as np
@@ -15,13 +17,15 @@ from keras.utils.np_utils import to_categorical
 import scipy.io as sio
 from scipy.io import loadmat
 from random import sample
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import classification_report, accuracy_score, matthews_corrcoef, balanced_accuracy_score, precision_recall_fscore_support
 import skimage.io as io
 import scipy.ndimage.filters as flt
 import warnings
 from PIL import Image
 
+""" DATA LOADER FUNCTIONS
+read_all_frames() reads all frames from a particular video and returns a numpy array of the frames
+my_frames(data_path, N) selects N frames from the numpy array of the frames returened from read_all_frames function
+"""
 
 def read_all_frames(video_path):
   frame_list = []
@@ -48,8 +52,8 @@ def my_frames(data_path, N = 15):
             c_frames = np.concatenate((c_frames, selected_frames), axis = 0)
     return c_frames
 
-
-data_path_train_real = '' # USE DATASET PATH
+# Provide the paths for train, development, and test sets
+data_path_train_real = '' 
 data_path_train_fixed = ''
 
 data_path_devel_real = ''
@@ -58,6 +62,7 @@ data_path_devel_fixed = ''
 data_path_test_real = ''
 data_path_test_fixed = ''
 
+## Function to load the training, validation and test data
 
 def load_all_data(data_path_train_real, data_path_train_fixed,
                 data_path_devel_real, data_path_devel_fixed,
@@ -94,6 +99,10 @@ x_train, y_train, x_val, y_val, x_test, y_test = load_all_data(data_path_train_r
                                                                data_path_test_real, data_path_test_fixed, 40)
 print(x_train.shape, x_val.shape, x_test.shape)
 
+""" Model definition
+MobileNet model without top layer, loaded with ImageNet weights
+the training of layers is set as True for fine tuning
+"""
 
 def my_model():
   input_tensor = K.Input(shape=(224, 224, 3))
@@ -121,10 +130,14 @@ def my_model():
                    metrics = 'accuracy')
   return antispoof
 
+""" Training Phase
+Early stopping patience set as 10
+Use datapath and file name for the checkpoint
+"""
 model = my_model()
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=0, patience=25)
+es = EarlyStopping(monitor='val_loss', mode='min', verbose=0, patience=10)
 
-checkpoint = ModelCheckpoint('/DATA_PATH/CASIA_224_inter_mobilenet_trainable.h5',
+checkpoint = ModelCheckpoint('/DATA_PATH/filename.h5',
                                 verbose=0, monitor='val_loss',save_best_only=True, mode='auto')
 
 history = model.fit(x_train, y_train,
@@ -136,13 +149,13 @@ history = model.fit(x_train, y_train,
               verbose = 1
               )
 del model  
-model = load_model('/DATA_PATH/CASIA_224_inter_mobilenet_trainable.h5')
+model = load_model('/DATA_PATH/filename.h5')
 
-
+## Inference Phase
 y_test_pred = model.predict(x_test,batch_size=64, verbose=0)
 y_test_pred = np.round(np.squeeze(y_test_pred))
 
-
+## Confusion matrix parameters calculation
 def perf_measure(y_actual, y_hat):
     TP = 0
     FP = 0
@@ -161,6 +174,8 @@ def perf_measure(y_actual, y_hat):
 
     return(TP, FP, TN, FN)
 
+  
+## Performance metrics calculation
 tp, fp, tn, fn = perf_measure(y_test, y_test_pred)
 print(tp, fp, tn, fn)
 
@@ -174,6 +189,6 @@ FAR = fp/(fp + tn)
 FRR = fn/(fn + tp)
 HTER = (FAR + FRR)/2
 EER = (fp+fn)/(tn+fp+fn+tp)
-print('CASIA 224 test Results')
+print('CASIA-FASD test Results')
 print(70*'-')
 print('Acc:', acc, 'YI:', Y_I, 'Sen:', sensitivity, 'Spe:', specificity, '\n F1:', f1score, 'HTER:', HTER, 'EER:', EER)
